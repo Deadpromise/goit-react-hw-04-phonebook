@@ -1,4 +1,4 @@
-import React, { Component } from 'react';
+import React, { useState, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { nanoid } from 'nanoid';
 import ContactForm from './ContactForm/ContactForm';
@@ -12,98 +12,94 @@ const initialContacts = [
   { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
 ];
 
-class App extends Component {
-  static propTypes = {
-    state: PropTypes.shape({
-      id: PropTypes.string.isRequired,
-      name: PropTypes.string.isRequired,
-      number: PropTypes.string.isRequired,
-    }),
-  };
-  state = {
-    contacts: initialContacts,
-    filter: '',
-  };
-  componentDidMount() {
-    const contacts = localStorage.getItem('contacts');
-    const parsedContacts = JSON.parse(contacts);
+function App() {
+  const [contacts, setContacts] = useState(initialContacts);
+  const [filter, setFilter] = useState('');
+
+  useEffect(() => {
+    const localContacts = localStorage.getItem('contacts');
+    const parsedContacts = JSON.parse(localContacts);
 
     if (parsedContacts) {
-      this.setState({ contacts: parsedContacts });
+      setContacts(parsedContacts);
     }
-  }
-  componentDidUpdate(prevProps, prevState) {
-    const currentContacts = this.state.contacts;
-    const prevContacts = prevState.contacts;
-    if (currentContacts !== prevContacts) {
-      localStorage.setItem('contacts', JSON.stringify(currentContacts));
-    }
-  }
+  }, []);
 
-  addContact = (name, number) => {
+  useEffect(() => {
+    if (contacts === initialContacts) {
+      return;
+    }
+    localStorage.setItem('contacts', JSON.stringify(contacts));
+    setContacts(contacts);
+  }, [contacts]);
+
+  const addContact = (name, number) => {
     const contact = {
       id: nanoid(),
       name,
       number,
     };
-    this.setState(prevState => {
-      const chekClone = prevState.contacts.find(
+    setContacts(() => {
+      const chekClone = contacts.find(
         item => item.name === contact.name || item.number === contact.number
       );
       if (chekClone) {
         alert(
           `User with name ${contact.name} or number ${contact.number} is already in contacts`
         );
-        return { contacts: [...prevState.contacts] };
+        return contacts;
       }
-      return { contacts: [contact, ...prevState.contacts] };
+      return [contact, ...contacts];
     });
   };
 
-  deleteContact = contactId => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(contact => contact.id !== contactId),
-    }));
+  const deleteContact = contactId => {
+    setContacts(() => contacts.filter(contact => contact.id !== contactId));
   };
-  getFilter = e => {
-    this.setState({ filter: e.currentTarget.value });
-  };
-  getFiltredContacts = () => {
-    const { filter, contacts } = this.state;
-    const normalizedFilter = filter.toLocaleLowerCase();
 
+  const getFilter = e => {
+    setFilter(e.currentTarget.value);
+  };
+
+  const getFiltredContacts = () => {
+    const normalizedFilter = filter.toLocaleLowerCase();
     return contacts.filter(contact =>
       contact.name.toLocaleLowerCase().includes(normalizedFilter)
     );
   };
+  const filteredContacts = getFiltredContacts();
 
-  render() {
-    const { filter } = this.state;
-    const filteredContacts = this.getFiltredContacts();
-    // console.log(this.state);
-    return (
-      <div
-        style={{
-          height: '100vh',
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          flexDirection: 'column',
-          fontSize: 40,
-          color: '#010101',
-        }}
-      >
-        <h1>Phonebook</h1>
-        <ContactForm onSubmit={this.addContact}></ContactForm>
-        <h2>Contacts</h2>
-        <Filter value={filter} onChange={this.getFilter}></Filter>
-        <ContactList
-          contacts={filteredContacts}
-          onDelete={this.deleteContact}
-        ></ContactList>
-      </div>
-    );
-  }
+  return (
+    <div
+      style={{
+        height: '100vh',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        flexDirection: 'column',
+        fontSize: 40,
+        color: '#010101',
+      }}
+    >
+      <h1>Phonebook</h1>
+      <ContactForm onSubmit={addContact}></ContactForm>
+      <h2>Contacts</h2>
+      <Filter value={filter} onChange={getFilter}></Filter>
+      <ContactList
+        contacts={filteredContacts}
+        onDelete={deleteContact}
+      ></ContactList>
+    </div>
+  );
 }
+
+App.propTypes = {
+  contacts: PropTypes.shape({
+    id: PropTypes.string.isRequired,
+    name: PropTypes.string.isRequired,
+    number: PropTypes.string.isRequired,
+  }),
+  filter: PropTypes.string,
+};
 
 export default App;
